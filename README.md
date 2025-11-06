@@ -43,19 +43,6 @@ Of course, this was a very simple explanation. There are many things to know abo
   <img src="https://user-images.githubusercontent.com/44752389/221366735-d25b821a-c143-4cf5-bf80-eb7da7644f1c.jpg" width="250" />
 </p>
 
-<p align="center">
 
-https://github.com/Arslanex/Doctor-Strange-Filter/assets/44752389/c2e8a8bb-c874-4dd5-8721-8ce3ca51d8b8
-
-</p>
 
 ***
-<h3 align="center"> Enes ARSLAN </h3>
-<p align="center">
-<a href="https://www.instagram.com/_enes.arslan_/?next=%2F">
-<img src="https://img.shields.io/badge/Instagram-000000?style=for-the-badge&logo=instagram&logoColor=white"/>
-<a href="https://www.linkedin.com/in/enes-arslan-/">
-<img src="https://img.shields.io/badge/LinkedIn-000000?style=for-the-badge&logo=linkedin&logoColor=white"/>
-<a href="https://github.com/Arslanex">
-<img src="https://img.shields.io/badge/GitHub-000000?style=for-the-badge&logo=github&logoColor=white"/ >
-</p>
