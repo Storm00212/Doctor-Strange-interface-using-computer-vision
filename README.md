@@ -22,11 +22,18 @@ Of course, this was a very simple explanation. There are many things to know abo
 └── README.md
 ```
 
+## Requirements
+
+- Python 3.8 - 3.11 (Mediapipe does not support Python 3.12+)
+
 ## Setup
 
-1. Clone this repostiory : `git clone https://github.com/Arslanex/Instagram-Mapping`
-2. Instal requirements : `pip install -r requirements.txt`
-3. Run main.py script : `python main.py`
+1. Clone this repository: `git clone https://github.com/Arslanex/Doctor-Strange-Filter`
+2. Ensure Python 3.8-3.11 is installed (see Requirements).
+3. Create a virtual environment: `py -3.11 -m venv venv`
+4. Activate the virtual environment: `venv\Scripts\activate` (Windows) or `source venv/bin/activate` (Linux/Mac)
+5. Install requirements: `pip install -r requirements.txt`
+6. Run the main.py script: `python main.py`
 
 ## Screenshots and Videos (will loaded)
 
