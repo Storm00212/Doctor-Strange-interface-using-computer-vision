@@ -199,47 +199,66 @@ def process_frame(frame, hands, config, inner_circle, outer_circle, deg):
             # This ratio determines which visual effect to apply
             ratio = index_pinky_distance / index_wrist_distance
 
-            # Gesture state 1: Moderately open hand - draw connecting lines
+            # Determine gesture state based on the calculated ratio and apply effects
+
+            # Gesture State 1: Moderately Open Hand (0.5 < ratio < 1.3)
+            # This represents a hand that's partially open, like making a "stop" gesture
+            # Effect: Draw glowing lines connecting the wrist to fingertips and between fingertips
             if 0.5 < ratio < 1.3:
+                # Create a list of all fingertip positions for easy iteration
                 fingers = [thumb_tip, index_tip, middle_tip, ring_tip, pinky_tip]
-                # Draw lines from wrist to each fingertip
+
+                # Draw radial lines from wrist center to each fingertip
+                # This creates a "starburst" or "web" pattern emanating from the palm
                 for finger in fingers:
                     frame = draw_line(frame, wrist, finger,
                                       color=tuple(config["line_settings"]["color"]),
                                       thickness=config["line_settings"]["thickness"])
-                # Draw lines between consecutive fingertips
+
+                # Draw connecting lines between consecutive fingertips
+                # This creates a "finger web" effect across the open fingers
                 for i in range(len(fingers) - 1):
                     frame = draw_line(frame, fingers[i], fingers[i + 1],
                                       color=tuple(config["line_settings"]["color"]),
                                       thickness=config["line_settings"]["thickness"])
 
-            # Gesture state 2: Fully open hand - display rotating magic circles
+            # Gesture State 2: Fully Open Hand (ratio >= 1.3)
+            # This represents a hand that's fully open and spread wide
+            # Effect: Display animated rotating magical circles (the signature Doctor Strange effect)
             elif ratio >= 1.3:
-                # Position circles at the middle finger MCP (center of palm)
+                # Use the middle finger MCP as the center point for the circles
+                # This provides a stable center that's in the middle of the palm
                 center_x, center_y = middle_mcp
 
-                # Calculate circle diameter based on hand size
+                # Calculate the diameter of the magic circles based on hand size
+                # Larger hands get larger circles, scaled by the configured multiplier
                 diameter = round(index_wrist_distance * config["overlay"]["shield_size_multiplier"])
 
-                # Calculate top-left corner for overlay, ensuring it stays within frame bounds
+                # Calculate the top-left corner position for overlay placement
+                # Clamp values to ensure the overlay stays within frame boundaries
                 x1 = limit_value(center_x - diameter // 2, 0, w)
                 y1 = limit_value(center_y - diameter // 2, 0, h)
 
-                # Ensure diameter doesn't exceed frame boundaries
+                # Final boundary check: ensure diameter fits within the frame
+                # This prevents the overlay from extending beyond frame edges
                 diameter = min(diameter, w - x1, h - y1)
 
-                # Update rotation angle for animation effect
+                # Update the rotation angle for the animation effect
+                # Accumulate rotation and wrap around at 360 degrees
                 deg = (deg + config["overlay"]["rotation_degree_increment"]) % 360
 
-                # Create rotation matrices for outer and inner circles (opposite directions)
+                # Create affine transformation matrices for rotating the circles
+                # Outer circle rotates clockwise, inner circle rotates counter-clockwise
+                # Rotation center is at the image center (width//2, height//2)
                 M1 = cv.getRotationMatrix2D((outer_circle.shape[1] // 2, outer_circle.shape[0] // 2), deg, 1.0)
                 M2 = cv.getRotationMatrix2D((inner_circle.shape[1] // 2, inner_circle.shape[0] // 2), -deg, 1.0)
 
-                # Apply rotations to the circle images
+                # Apply the rotation transformations to create animated circle images
                 rotated_outer = cv.warpAffine(outer_circle, M1, (outer_circle.shape[1], outer_circle.shape[0]))
                 rotated_inner = cv.warpAffine(inner_circle, M2, (inner_circle.shape[1], inner_circle.shape[0]))
 
-                # Overlay the rotated circles onto the frame
+                # Overlay both rotated circles onto the frame at the calculated position
+                # The circles are scaled to the calculated diameter and blended with transparency
                 frame = overlay_image(rotated_outer, frame, x1, y1, (diameter, diameter))
                 frame = overlay_image(rotated_inner, frame, x1, y1, (diameter, diameter))
 
@@ -280,29 +299,45 @@ def main():
     deg = 0
 
     try:
-        # Main processing loop
+        # Enter the main real-time processing loop
+        # This loop runs continuously until the user quits or an error occurs
         while cap.isOpened():
-            # Capture frame from webcam
+            # Step 1: Capture a single frame from the webcam
+            # success is True if frame was captured successfully
             success, frame = cap.read()
+
+            # If frame capture failed, break out of the loop
+            # This could happen if camera is disconnected or busy
             if not success:
                 print("Failed to capture frame.")
                 break
 
-            # Flip frame horizontally for mirror effect (natural for webcam)
+            # Step 2: Flip the frame horizontally to create a mirror effect
+            # This makes the video feel more natural, like looking in a mirror
+            # cv.flip(frame, 1) flips along the y-axis (horizontal flip)
             frame = cv.flip(frame, 1)
 
-            # Process the frame and apply visual effects
+            # Step 3: Process the frame through our computer vision pipeline
+            # This applies hand detection and visual effects based on gesture
+            # Returns the processed frame and updated rotation angle
             frame, deg = process_frame(frame, hands, config, inner_circle, outer_circle, deg)
 
-            # Display the processed frame
+            # Step 4: Display the processed frame in a window
+            # "Image" is the window title, frame contains the visual effects
             cv.imshow("Image", frame)
 
-            # Check for quit key press (non-blocking wait)
+            # Step 5: Check for user input to quit the application
+            # cv.waitKey(1) waits 1ms for a key press (non-blocking)
+            # Compare against the configured quit key (usually 'q' or ESC)
             if cv.waitKey(1) == ord(config["keybindings"]["quit_key"]):
                 break
+
     finally:
-        # Ensure proper cleanup of resources
+        # Cleanup section: Always executed whether loop exits normally or due to error
+        # Release the video capture device to free camera resources
         cap.release()
+
+        # Close all OpenCV windows to clean up the display
         cv.destroyAllWindows()
 
 # Entry point for the application
