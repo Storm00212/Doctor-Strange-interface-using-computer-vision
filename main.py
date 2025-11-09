@@ -163,30 +163,40 @@ def process_frame(frame, hands, config, inner_circle, outer_circle, deg):
         tuple: (processed_frame, updated_deg) where processed_frame has effects applied
                and updated_deg is the new rotation angle for the next frame.
     """
-    # Get frame dimensions for coordinate scaling
+    # Extract frame dimensions (height, width, channels) for coordinate conversion
     h, w, _ = frame.shape
 
-    # Convert BGR to RGB for MediaPipe (MediaPipe expects RGB input)
+    # Convert from OpenCV's BGR color space to RGB for MediaPipe compatibility
+    # MediaPipe's hand detection model requires RGB input format
     rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
 
-    # Process the frame with MediaPipe Hands
+    # Run MediaPipe hand detection on the RGB frame
+    # This returns landmark coordinates for any detected hands
     results = hands.process(rgb_frame)
 
-    # Process each detected hand
+    # Check if any hands were detected in the frame
     if results.multi_hand_landmarks:
+        # Process each detected hand (supports multiple hands)
         for hand_landmarks in results.multi_hand_landmarks:
-            # Convert normalized coordinates (0-1) to pixel coordinates
+            # Convert MediaPipe's normalized coordinates (0.0-1.0) to pixel coordinates
+            # MediaPipe returns relative positions, so we scale by frame dimensions
             lm_list = [(int(lm.x * w), int(lm.y * h)) for lm in hand_landmarks.landmark]
 
-            # Extract key hand positions using our utility function
+            # Extract the 8 key landmark positions we need for gesture analysis
+            # This includes wrist, fingertips, and palm joint positions
             (wrist, thumb_tip, index_mcp, index_tip,
              middle_mcp, middle_tip, ring_tip, pinky_tip) = position_data(lm_list)
 
-            # Calculate distances for gesture analysis
+            # Calculate key distances for determining hand gesture state:
+            # 1. Distance from wrist to index MCP (measures hand size/proximity)
             index_wrist_distance = calculate_distance(wrist, index_mcp)
+
+            # 2. Distance from index tip to pinky tip (measures finger spread)
             index_pinky_distance = calculate_distance(index_tip, pinky_tip)
 
-            # Calculate hand openness ratio (higher ratio = more open hand)
+            # Calculate the gesture ratio: finger spread relative to hand size
+            # Higher ratio indicates more open/spread fingers
+            # This ratio determines which visual effect to apply
             ratio = index_pinky_distance / index_wrist_distance
 
             # Gesture state 1: Moderately open hand - draw connecting lines
