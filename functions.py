@@ -57,10 +57,13 @@ def position_data(lmlist: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
     if len(lmlist) < 21:
         raise ValueError("Landmark list must contain at least 21 points.")
 
-    # Indices correspond to MediaPipe hand landmark model:
-    # 0: wrist, 4: thumb tip, 5: index MCP, 8: index tip,
-    # 9: middle MCP, 12: middle tip, 16: ring tip, 20: pinky tip
-    keys = [0, 4, 5, 8, 9, 12, 16, 20]
+    # Define the specific landmark indices we need for gesture analysis
+    # MediaPipe hand model has 21 landmarks total (0-20)
+    # We select key points for wrist, fingertips, and palm positions
+    keys = [0, 4, 5, 8, 9, 12, 16, 20]  # Specific indices for our analysis
+
+    # Extract and return the coordinates for these key landmarks
+    # This creates a list of (x, y) tuples in the order specified above
     return [lmlist[i] for i in keys]
 
 def calculate_distance(p1: Tuple[int, int], p2: Tuple[int, int]) -> float:
@@ -83,7 +86,10 @@ def calculate_distance(p1: Tuple[int, int], p2: Tuple[int, int]) -> float:
     Returns:
         float: Euclidean distance between the two points in pixels.
     """
-    # Use numpy's vectorized norm calculation for better performance
+    # Convert tuples to numpy arrays for vectorized operations
+    # Subtract the arrays to get the difference vector (dx, dy)
+    # Use numpy's linalg.norm to compute Euclidean distance: sqrt(dx^2 + dy^2)
+    # This is more efficient and numerically stable than manual calculation
     return np.linalg.norm(np.array(p1) - np.array(p2))
 
 def draw_line(
@@ -115,10 +121,16 @@ def draw_line(
     Returns:
         np.ndarray: The modified frame with the drawn line effect.
     """
-    # Draw the outer colored line
+    # First, draw the outer line with the specified color and full thickness
+    # This creates the main visible line of the magical connection
     cv.line(frame, p1, p2, color, thickness)
-    # Draw the inner white line for glowing effect (half thickness, minimum 1)
+
+    # Then draw a thinner inner white line on top for a glowing effect
+    # The white line is centered on the colored line, creating a highlight
+    # max(1, thickness // 2) ensures minimum thickness of 1 pixel
     cv.line(frame, p1, p2, WHITE_COLOR, max(1, thickness // 2))
+
+    # Return the modified frame with the glowing line effect
     return frame
 
 def overlay_image(
@@ -160,40 +172,52 @@ def overlay_image(
         ValueError: If target image doesn't have 4 channels or overlay exceeds frame bounds.
         cv.error: If resizing operation fails.
     """
-    # Resize the target image if a specific size is requested
+    # Step 1: Resize the overlay image if a specific size is provided
+    # This allows dynamic scaling of the magical circles based on hand size
     if size:
         try:
+            # Use OpenCV's resize function with default interpolation
             target_img = cv.resize(target_img, size)
         except cv.error as e:
+            # Handle any resizing errors (e.g., invalid size parameters)
             raise ValueError(f"Error resizing the target image: {e}")
 
-    # Ensure the target image has an alpha channel (4th dimension)
+    # Step 2: Validate that the image has an alpha channel
+    # Alpha channel is crucial for transparency effects
     if target_img.shape[-1] != 4:
         raise ValueError("Target image must have 4 channels (RGBA).")
 
-    # Split the image into its RGBA components
+    # Step 3: Separate the image into its color and alpha components
+    # Split into Blue, Green, Red, and Alpha channels
     b, g, r, a = cv.split(target_img)
-    # Reconstruct the color image without alpha
+
+    # Step 4: Reconstruct the color image (BGR format for OpenCV)
     overlay_color = cv.merge((b, g, r))
-    # Create a smooth mask from the alpha channel using median blur to reduce noise
+
+    # Step 5: Create a smooth transparency mask from the alpha channel
+    # Median blur reduces noise in the alpha channel for cleaner edges
     mask = cv.medianBlur(a, 5)
 
-    # Get dimensions of the overlay
+    # Step 6: Get the dimensions of the overlay image
     h, w, _ = overlay_color.shape
 
-    # Check if overlay fits within frame boundaries
+    # Step 7: Boundary check - ensure overlay doesn't exceed frame dimensions
     if y + h > frame.shape[0] or x + w > frame.shape[1]:
         raise ValueError("Overlay exceeds frame boundaries.")
 
-    # Define the region of interest (ROI) on the frame
+    # Step 8: Define the region of interest (ROI) on the destination frame
     roi = frame[y:y + h, x:x + w]
 
-    # Create the background: original ROI where mask is inverted (transparent areas)
+    # Step 9: Alpha blending process
+    # Create background layer: original pixels where overlay is transparent
     img1_bg = cv.bitwise_and(roi, roi, mask=cv.bitwise_not(mask))
-    # Create the foreground: overlay color where mask is applied (opaque areas)
+
+    # Create foreground layer: overlay pixels where overlay is opaque
     img2_fg = cv.bitwise_and(overlay_color, overlay_color, mask=mask)
 
-    # Combine background and foreground using addition (alpha blending)
+    # Step 10: Combine the layers using addition (perfect alpha blending)
+    # This creates the final composite where transparent areas show background
     frame[y:y + h, x:x + w] = cv.add(img1_bg, img2_fg)
 
+    # Return the frame with the overlay applied
     return frame
